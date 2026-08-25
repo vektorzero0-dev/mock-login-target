@@ -1,14 +1,6 @@
 {
-  "functions": {
-    "api/login.js": {
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  },
-  "routes": [
-    {
-      "src": "/api/login",
-      "dest": "/api/login.js"
-    }
+  "version": 2,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.js" }
   ]
 }

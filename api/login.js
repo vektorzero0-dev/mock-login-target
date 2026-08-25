@@ -1,38 +1,37 @@
-// Memori sementara untuk mencatat request IP (Reset otomatis di Serverless)
 const attempts = {};
 
 export default function handler(req, res) {
-  // Hanya menerima metode POST
+  // Bolehkan CORS agar aplikasi penguji tidak terbendung
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // Supaya saat dibuka di browser tidak 404
+  if (req.method === 'GET') {
+    return res.status(200).json({ message: "Server Target Vercel Aktif!" });
+  }
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
+    return res.status(405).json({ message: "Method Not Allowed" });
   }
 
   const clientIp = req.headers['x-forwarded-for'] || 'unknown-ip';
-  const { username, password } = req.body || {};
   const currentTime = Date.now();
 
-  if (!attempts[clientIp]) {
-    attempts[clientIp] = [];
-  }
+  if (!attempts[clientIp]) attempts[clientIp] = [];
+  attempts[clientIp] = attempts[clientIp].filter(t => currentTime - t < 60000);
 
-  // Hapus catatan request yang sudah lebih dari 60 detik
-  attempts[clientIp] = attempts[clientIp].filter(time => currentTime - time < 60000);
-
-  // --- ATURAN RATE LIMIT: Maksimal 10 request per menit ---
+  // Batas rate limit: 10 request per menit
   if (attempts[clientIp].length >= 10) {
     return res.status(429).json({ 
       status: 429, 
-      message: 'Too Many Requests! Proteksi Rate-Limit Aktif.' 
+      message: "Too Many Requests! Proteksi Rate-Limit Aktif." 
     });
   }
 
-  // Catat request saat ini
   attempts[clientIp].push(currentTime);
-
-  // Logika PIN (Misal PIN yang benar adalah 1234)
-  if (username === 'admin' && password === '1234') {
-    return res.status(200).json({ status: 200, message: 'Login Berhasil!' });
-  } else {
-    return res.status(401).json({ status: 401, message: 'PIN Salah' });
-  }
+  return res.status(401).json({ status: 401, message: "PIN Salah" });
 }
